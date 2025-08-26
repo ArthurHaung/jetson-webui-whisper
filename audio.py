@@ -120,13 +120,13 @@ def compress_audio(filepath: str) -> str:
     
 
 @router.post(
-    path="/transcribe",
+    path="/transcriptions",
     response_model=TranscriptionResponse,
     status_code=status.HTTP_200_OK,
     summary="Transcribe audio to text",
 )
-async def transcribe_audio(
-    file: UploadFile = File(..., description="Audio file to transcribe"),
+async def transcriptions (
+    file: UploadFile = File(..., description="Audio file to transcriptions"),
     model: Optional[str] = Form("base", description="Whisper model size (tiny, base, small, medium, large)"),
     language: Optional[str] = Form("zh", description="Language code (e.g., 'en', 'es', 'fr')")
 ):
