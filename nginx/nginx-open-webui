@@ -5,8 +5,22 @@ map $http_upgrade $connection_upgrade {
 }
 
 server {
-	listen 80;
-	server_name _;
+	listen 80 default_server;
+	listen [::]:80 default_server;
+
+	server_name aib.avalue.com;
+	return 301 https://$host$request_uri;
+}
+
+server {
+	listen 443 ssl;
+	listen [::]:443 ssl;
+
+	ssl_certificate /etc/nginx/certs/aib.avalue.com.crt;
+	ssl_certificate_key /etc/nginx/certs/aib.avalue.com.key;
+
+	server_name aib.avalue.com;
+	
 	root /var/www/html/open-webui;
 
 	location / {
@@ -14,7 +28,7 @@ server {
 	}
 
 	location /ws/socket.io {
-		proxy_pass https://genai.avalue.com;
+		proxy_pass https://genai.avalue.com/ws/socket.io;
 
 		proxy_set_header Host $host;
 		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
