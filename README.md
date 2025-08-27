@@ -2,142 +2,123 @@
 
 A FastAPI-based speech-to-text server powered by OpenAI Whisper, optimized for NVIDIA Jetson Orin 16GB (JetPack 5.1.1 / 35.3.1) with CUDA acceleration and PyTorch 2.1.0 support.
 
+> **Note:** See more about the web service and reverse proxy setup in [./nginx/README.md](./nginx/README.md).
+
 ## Features
 
-- **GPU Acceleration**: CUDA support for faster transcription on NVIDIA hardware
-- **Multiple Audio Formats**: Support for MP3, WAV, M4A, MP4, MPEG, MPGA, WebM, OGG, FLAC
-- **Batch Processing**: Transcribe multiple files simultaneously
-- **Language Detection**: Automatic language detection or manual specification
-- **REST API**: Full OpenAPI/Swagger documentation
-- **Audio Compression**: Automatic compression for large audio files
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.8+
-- NVIDIA GPU with CUDA 11.4+ (optional, CPU fallback available)
-- FFmpeg for audio processing
-
-### Installation
-
-1. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Start the server:**
-   ```bash
-   # Using the run script
-   ./run.sh
-   
-   # Or directly with uvicorn
-   uvicorn main:app --host 0.0.0.0 --port 8081
-   ```
-
-3. **Access the API:**
-   - API Documentation: http://localhost:8081/docs
-   - Health Check: http://localhost:8081/health
-   - GPU Status: http://localhost:8081/gpu-status
-
-## API Endpoints
-
-### Core Endpoints
-
-- `POST /transcribe` - Transcribe a single audio file
-- `POST /transcribe-batch` - Transcribe multiple audio files
-- `GET /health` - Health check and model status
-- `GET /gpu-status` - GPU memory and status information
-
-### Utility Endpoints
-
-- `GET /languages` - List supported languages
-- `GET /models` - List available Whisper models
-- `GET /` - API information
-
-### Example Usage
-
-**Single File Transcription:**
-```bash
-curl -X POST "http://localhost:8081/transcribe" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@audio.mp3" \
-  -F "language=en" \
-  -F "include_segments=true"
-```
-
-**Python Client Example:**
-```python
-import requests
-
-# Transcribe audio file
-with open("audio.mp3", "rb") as f:
-    response = requests.post(
-        "http://localhost:8081/transcribe",
-        files={"file": f},
-        data={"language": "en", "include_segments": True}
-    )
-    
-result = response.json()
-print(f"Transcription: {result['text']}")
-```
-
-**Swagger Client Example:**
-
-You can easily test and interact with the API using the built-in Swagger UI. Open your browser and navigate to [http://localhost:8081/docs](http://localhost:8081/docs). From there, you can try out all endpoints, upload audio files, and view responses directly in your browser.
+- GPU acceleration when CUDA is available (falls back to CPU)
+- Multiple audio formats: MP3, WAV, M4A, MP4, MPEG, MPGA, WebM, OGG, FLAC
+- REST API with OpenAPI/Swagger documentation
+- Automatic audio compression for large uploads
 
 
-## Configuration
+## Quick Start (Developers)
 
-### Environment Variables
-
-- `WHISPER_MODEL`: Model size (tiny, base, small, medium, large) - default: "small"
-- `CUDA_DEVICE`: CUDA device index - default: 0
-- `MAX_FILE_SIZE`: Maximum upload size in MB - default: 100
-
-### Supported Languages
-
-The API supports 99+ languages including English, Spanish, French, German, Chinese, Japanese, and many more. Use the `/languages` endpoint to get the full list.
-
-## Development
-
-### Project Structure
-
-```
-├── main.py              # Main FastAPI application
-├── requirements.txt     # Python dependencies
-├── run.sh              # Server startup script
-├── README.md           # This file
-└── .gitignore          # Git ignore rules
-```
-
-### Key Components
-
-- **[`main.py`](main.py)**: Contains the FastAPI application with all endpoints
-- **[`startup_event`](main.py)**: Loads the Whisper model on application startup
-- **[`transcribe_audio`](main.py)**: Main transcription function with file validation
-- **[`save_temp_file`](main.py)**: Handles file uploads and temporary storage
-- **[`compress_audio`](main.py)**: Automatic audio compression for large files
-
-### Running in Development
+- Requirements: Python 3.8, FFmpeg installed on the system
 
 ```bash
+# Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
 # Install dependencies
 pip install -r requirements.txt
 
-# Run with auto-reload
-uvicorn main:app --reload --host 0.0.0.0 --port 8081
-
-# Or use the provided script
-chmod +x run.sh
+# Start the API server
 ./run.sh
+# or
+uvicorn main:app --host 0.0.0.0 --port 8081
 ```
 
-## NVIDIA Jetson Setup (Optional)
+- API Docs: http://localhost:8081/docs
+- OpenAPI JSON: http://localhost:8081/openapi.json
 
-For NVIDIA Jetson devices, follow these additional setup steps:
 
-### System Dependencies
+## API
+
+Base URL: http://localhost:8081
+
+- POST `/api/v1/audio/transcriptions` — Transcribe a single audio file
+- GET `/` — Root endpoint with basic API info
+
+Supported upload formats: `.mp3, .wav, .m4a, .mp4, .mpeg, .mpga, .webm, .ogg, .flac`
+
+### Request parameters (multipart/form-data)
+- `file` (required): Audio file to transcribe
+- `model` (optional): Whisper model size (`tiny`, `base`, `small`, `medium`, `large`). Default: `base`
+- `language` (optional): Language code (e.g., `en`, `zh`, `fr`). Default: `zh`
+
+### cURL example
+```bash
+curl -X POST \
+  'http://localhost:8081/api/v1/audio/transcriptions' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@audio.mp3;type=audio/mpeg' \
+  -F 'model=base' \
+  -F 'language=zh'
+```
+
+### Python example
+```python
+import requests
+
+with open("audio.mp3", "rb") as f:
+    resp = requests.post(
+        "http://localhost:8081/api/v1/audio/transcriptions",
+        files={"file": f},
+        data={"language": "zh", "model": "base"}
+    )
+
+print(resp.status_code)
+print(resp.json())
+```
+
+
+## Project Structure
+
+```
+├── main.py          # FastAPI app, router registration, docs
+├── audio.py         # /api/v1/audio/transcriptions implementation
+├── run.sh           # Convenience script to start the API (expects ./venv)
+├── requirements.txt # Python dependencies
+├── nginx/           # Optional NGINX reverse-proxy and static Open WebUI
+└── README.md
+```
+
+
+## Open Source Repositories
+
+This project leverages several open source components:
+
+- OpenAI Whisper — General-purpose speech recognition model
+- FastAPI — Web framework for building APIs with Python
+- PyTorch — Deep learning framework for accelerated computing
+- CTranslate2 — Fast inference engine for Whisper models
+- faster-whisper — Fast Whisper inference using CTranslate2
+- FFmpeg — Cross-platform solution to record, convert and stream audio
+- Hugging Face Hub — Client library to interact with the Hugging Face Hub
+
+
+## Performance Notes
+
+- CUDA will be used automatically when available; otherwise CPU is used
+- Files larger than 10MB are compressed to 16kHz mono MP3 before transcription
+- Model size defaults to `base` for a balance of speed and accuracy
+
+
+## Troubleshooting
+
+- CUDA not detected: ensure NVIDIA drivers and CUDA toolkit are correctly installed
+- Unsupported file format: convert audio to a supported format (MP3, WAV, etc.)
+- Model loading fails: verify network access for the first model download
+
+
+## NVIDIA Jetson Orin NX System Dependencies
+
+For NVIDIA Jetson Orin NX, follow these additional setup steps (verified):
+- CUDA 11.4
+- JetPack 5.1.1 (L4T R35.3.1)
+- Python 3.8
 
 ```bash
 sudo apt update
@@ -278,30 +259,3 @@ sudo -H pip3 install 'av==10.*' 'huggingface_hub>=0.13' 'tokenizers>=0.13,<0.15'
 sudo -H pip3 install . --no-binary ctranslate2
 ```
 
-## Performance Notes
-
-- **GPU Memory**: The service automatically detects CUDA availability and uses GPU acceleration when possible
-- **File Compression**: Files larger than 10MB are automatically compressed to reduce processing time
-- **Batch Processing**: Limited to 10 files per batch to prevent memory issues
-- **Model Size**: Currently uses "small" model for balance between speed and accuracy
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CUDA not detected**: Ensure NVIDIA drivers and CUDA toolkit are properly installed
-2. **Out of memory**: Reduce batch size or use CPU mode
-3. **Unsupported file format**: Convert audio to supported format (MP3, WAV, etc.)
-4. **Model loading fails**: Check internet connection for initial model download
-
-### Logs
-
-The application uses structured logging. Check logs for detailed error information:
-
-```bash
-# View logs in real-time
-tail -f /var/log/whisper-api.log
-
-# Check GPU status
-curl http://localhost:8081/gpu-status
-```

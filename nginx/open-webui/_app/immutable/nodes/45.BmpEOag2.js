@@ -1,0 +1,2 @@
+import{S as s,i as a,s as r,w as i}from"../chunks/BCvnKofF.js";import"../chunks/IHki7fMi.js";import{g as e}from"../chunks/xuwbn1vA.js";function c(n){return i(()=>{const o=new URLSearchParams(window.location.search);if(o.has("v")){const t=o.get("v");e(`/?youtube=${encodeURIComponent(t)}`)}else e("/")}),[]}class l extends s{constructor(o){super(),a(this,o,c,null,r,{})}}export{l as component};
+//# sourceMappingURL=45.BmpEOag2.js.map
