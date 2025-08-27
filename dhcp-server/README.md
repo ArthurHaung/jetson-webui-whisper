@@ -27,14 +27,31 @@ sudo apt install isc-dhcp-server dnsmasq
 sudo cp dhcpd.conf /etc/dhcp/dhcpd.conf
 sudo cp local.conf /etc/dnsmasq.d/local.conf
 
+sudo systemctl restart isc-dhcp-server
+sudo systemctl restart dnsmasq
+
 ```
 
-# Configuration Descriptions
 
-## dhcpd.conf
-This file configures the ISC DHCP server for the subnet `192.168.100.0/24`. It sets the DHCP address range (`192.168.100.50`–`192.168.100.100`), router, DNS, subnet mask, and other DHCP options. The server is set as authoritative for this network.
-
-## local.conf
-This file configures dnsmasq to bind to interface `eth1` and IP `192.168.100.1`, sets upstream DNS servers (`168.95.1.1`, `8.8.8.8`, `1.1.1.1`), and configures the local domain as `aib.avalue.com` with host expansion enabled.
+## Required Interface Configs
 
 
+### /etc/netplan/01-network.yaml
+```yaml
+
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth1:
+      dhcp4: false
+      addresses:
+        - 172.16.13.1/24 # need to fixed ip address as dhcp-server
+
+```
+
+### /etc/hosts
+```
+# add the config as follow
+172.16.13.1	aib.avalue.com
+```
